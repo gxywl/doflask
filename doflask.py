@@ -4,6 +4,8 @@
 from datetime import datetime
 
 import os
+from threading import Thread
+
 from flask import Flask, render_template, session, redirect, url_for, flash
 from flask_mail import Mail, Message
 from flask_migrate import Migrate, MigrateCommand
@@ -73,13 +75,19 @@ manager.add_command('shell', Shell(make_context=make_shell_context))
 
 manager.add_command('db', MigrateCommand)
 
+def send_async_email(app,msg):
+    with app.app_context():
+        mail.send(msg)
 
 def send_email(to, subject, template, **kwargs):
     msg = Message(app.config['DOFLASK_MAIL_SUBJECT_PREFIX'] + subject, sender=app.config['DOFLASK_MAIL_SENDER'],
                   recipients=[to])
     msg.body = render_template(template + '.txt', **kwargs)
     msg.html = render_template(template + '.html', **kwargs)
-    mail.send(msg)
+    #mail.send(msg)
+    thr = Thread(target=send_async_email,args=[app,msg])
+    thr.start()
+    return thr
 
 class NameForm(FlaskForm):
     name = StringField("What is your name?", validators=[DataRequired()])
