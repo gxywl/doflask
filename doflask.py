@@ -5,7 +5,7 @@ from datetime import datetime
 
 import os
 from flask import Flask, render_template, session, redirect, url_for, flash
-from flask_mail import Mail
+from flask_mail import Mail, Message
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager, Shell
 from flask_bootstrap import Bootstrap
@@ -30,6 +30,11 @@ app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+
+app.config['DOFLASK_MAIL_SUBJECT_PREFIX'] = '[DoFlask]'
+app.config['DOFLASK_MAIL_SENDER'] = 'DoFlask Admin<50037521@qq.com>'
+
+app.config['DOFLASK_ADMIN'] = os.environ.get('DOFLASK_ADMIN')
 
 manager = Manager(app)
 bootstrap = Bootstrap(app)
@@ -69,6 +74,13 @@ manager.add_command('shell', Shell(make_context=make_shell_context))
 manager.add_command('db', MigrateCommand)
 
 
+def send_email(to, subject, template, **kwargs):
+    msg = Message(app.config['DOFLASK_MAIL_SUBJECT_PREFIX'] + subject, sender=app.config['DOFLASK_MAIL_SENDER'],
+                  recipients=[to])
+    msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template + '.html', **kwargs)
+    mail.send(msg)
+
 class NameForm(FlaskForm):
     name = StringField("What is your name?", validators=[DataRequired()])
     submit = SubmitField('submit')
@@ -84,10 +96,13 @@ def index():
             db.session.add(user)
             session['known'] = False
             flash('Looks like you NEW!')
+            if app.config['DOFLASK_ADMIN']:
+                send_email(app.config['DOFLASK_ADMIN'], 'New User', 'mail/new_user', user=user)
         else:
             session['known'] = True
             flash('Looks like you OLD!')
         session['name'] = form.name.data
+        form.name.data = ''
         return redirect(url_for('index'))
     return render_template('index.html', form=form, name=session.get('name'), known=session.get('known', False),
                            current_time=datetime.utcnow())
