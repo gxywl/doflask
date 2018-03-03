@@ -1,17 +1,17 @@
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Regexp
 
 from app.models import User
 
 
-class LoginForm(Form):
+class LoginForm(FlaskForm):
     email = StringField('Email',validators=[DataRequired(),Length(1,64),Email()])
     password=PasswordField('Password',validators=[DataRequired()])
     remember_me=BooleanField('Keep me logged in')
     submit=SubmitField('Log In')
 
-class RegistrationForm(Form):
+class RegistrationForm(FlaskForm):
     email = StringField('Email',validators=[DataRequired(),Length(1,64),Email()])#
 
     username = StringField('Username', validators=[
@@ -31,3 +31,5 @@ class RegistrationForm(Form):
     def validate_username(self, field):
         if User.query.filter_by(username=field.data).first():
             raise ValidationError('Username already registered.')
+
+
